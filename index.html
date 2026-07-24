@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus GHG Emissions Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <header class="bg-emerald-700 text-white shadow-md py-4 px-6 sm:px-8 flex items-center justify-between sticky top-0 z-10">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Campus GHG Dashboard</h1>
+        </div>
+        <div class="text-sm font-medium text-emerald-100 hidden sm:block">
+            Data Source: <span class="italic font-normal">"Inventori GHG untuk kampus danpengiraan data pelepasan karbon (2)_2.xlsx"</span>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        
+        <!-- Key Performance Indicators (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            
+            <!-- KPI 1: Total Emissions -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200 flex flex-col justify-center transform transition duration-300 hover:shadow-md hover:-translate-y-1">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Carbon Footprint*</p>
+                <div class="flex items-baseline gap-2">
+                    <h2 class="text-3xl font-extrabold text-slate-800" id="total-emissions">3,923</h2>
+                    <span class="text-sm font-medium text-slate-500">tCO₂e (2025)</span>
+                </div>
+                <div class="mt-3 flex items-center text-sm">
+                    <span class="text-emerald-600 flex items-center font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                        </svg>
+                        -18.5%
+                    </span>
+                    <span class="text-slate-400 ml-2">vs last year</span>
+                </div>
+            </div>
+
+            <!-- KPI 2: Emissions per Student -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200 flex flex-col justify-center transform transition duration-300 hover:shadow-md hover:-translate-y-1">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">Emissions per Capita</p>
+                <div class="flex items-baseline gap-2">
+                    <h2 class="text-3xl font-extrabold text-slate-800" id="per-capita">0.85</h2>
+                    <span class="text-sm font-medium text-slate-500">tCO₂e/student</span>
+                </div>
+                <div class="mt-3 flex items-center text-sm">
+                    <span class="text-emerald-600 flex items-center font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
+                        </svg>
+                        -19.2%
+                    </span>
+                    <span class="text-slate-400 ml-2">vs last year</span>
+                </div>
+            </div>
+
+            <!-- KPI 3: Largest Scope -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200 flex flex-col justify-center transform transition duration-300 hover:shadow-md hover:-translate-y-1">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">Primary Contributor</p>
+                <div class="flex flex-col">
+                    <h2 class="text-xl font-bold text-slate-800 truncate" id="largest-scope">Scope 2 (Electricity)</h2>
+                    <span class="text-lg font-semibold text-emerald-600 mt-1">100% <span class="text-sm font-normal text-slate-500">of tracked</span></span>
+                </div>
+            </div>
+
+            <!-- KPI 4: Data Quality/Completeness -->
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200 flex flex-col justify-center transform transition duration-300 hover:shadow-md hover:-translate-y-1">
+                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">Inventory Completeness</p>
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-2xl font-extrabold text-slate-800">Partial</h2>
+                    <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded border border-amber-200">Missing Data</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5">
+                    <div class="bg-amber-500 h-2.5 rounded-full" style="width: 70%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            
+            <!-- Monthly/Yearly Trend (Line Chart) -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-3">
+                <div class="mb-4 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Emissions Trend (YTD)*</h3>
+                        <p class="text-sm text-slate-500">Tracking monthly performance (2026 data until June)</p>
+                    </div>
+                    <select class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2">
+                        <option>2026 vs 2025</option>
+                    </select>
+                </div>
+                <div class="relative w-full h-72">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Emissions Breakdown by Source (Bar Chart) -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">Top Energy Consumers</h3>
+                    <p class="text-sm text-slate-500">Total consumption (kWh) for 2025</p>
+                </div>
+                <div class="relative flex-grow w-full min-h-[250px]">
+                    <canvas id="sourceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Energy Intensity (kWh/m2) -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">Energy Intensity (kWh/m²)*</h3>
+                    <p class="text-sm text-slate-500">Highest intensity per square meter</p>
+                </div>
+                <div class="relative flex-grow w-full min-h-[250px]">
+                    <canvas id="intensityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Emissions by Scope (Doughnut Chart) -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">Emissions by Scope</h3>
+                    <p class="text-sm text-slate-500">Distribution of available data</p>
+                </div>
+                <div class="relative flex-grow flex items-center justify-center min-h-[250px]">
+                    <canvas id="scopeChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footnotes Section -->
+        <div class="mt-6 text-sm text-slate-500 space-y-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+            <p><span class="font-bold text-slate-700">* YTD (Year-To-Date):</span> Data bagi tahun 2026 adalah direkodkan sehingga bulan Jun sahaja.</p>
+            <p><span class="font-bold text-slate-700">* Pemasangan Meter:</span> Data untuk beberapa buah bangunan dicatatkan sebagai kosong (0) kerana proses pemasangan meter elektrik khusus untuk bangunan-bangunan tersebut kini masih di dalam proses pelaksanaan.</p>
+        </div>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 py-6 text-center text-sm border-t border-slate-700 mt-auto">
+        <p>&copy; 2026 Campus Sustainability Office. Dashboard generated for analysis.</p>
+        <p class="mt-1 text-xs text-slate-400">Values based on "Inventori GHG untuk kampus danpengiraan data pelepasan karbon (3).xlsx".</p>
+    </footer>
+
+    <script>
+        // Pembolehubah Global (Global variables) untuk menyimpan carta supaya boleh dikemas kini
+        let scopeChart, sourceChart, intensityChart, trendChart;
+
+        // Tetapan lalai carta
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        Chart.defaults.color = '#64748b'; 
+
+        // Fungsi utama untuk memuat turun data Live dari Google Sheets
+        function loadLiveExcelData() {
+            const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRzhnSufRXiSZQN1RnsKwmLR6ItonxmI4ag7Zevfw4t7y5_7u3poVW0lDpc6rR2xQ/pub?output=csv';
+            
+            Papa.parse(csvUrl, {
+                download: true,
+                header: false, // Diset kepada false kerana baris tajuk excel selalunya berterabur di atas
+                complete: function(results) {
+                    processCSVData(results.data);
+                },
+                error: function(error) {
+                    console.error("Ralat membaca CSV:", error);
+                    alert("Tidak dapat mengambil data. Sila pastikan pautan Google Sheets adalah betul.");
+                }
+            });
+        }
+
+        // Fungsi untuk menterjemah dan memproses data CSV
+        function processCSVData(rows) {
+            let headerRowIndex = -1;
+            
+            // 1. Cari baris yang mengandungi tajuk lajur sebenar (mempunyai perkataan 'Bangunan')
+            for(let i=0; i<rows.length; i++) {
+                if(rows[i] && (rows[i].includes('Bangunan') || rows[i].includes('BANGUNAN'))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            if (headerRowIndex === -1) {
+                console.error("Format tidak dijangka: Gagal mencari lajur 'Bangunan' dalam sheet.");
+                return; // Henti jika tidak jumpa
+            }
+
+            const headers = rows[headerRowIndex];
+            
+            // 2. Kenal pasti index / posisi setiap lajur penting
+            const findCol = (keyword) => headers.findIndex(h => h && h.toLowerCase().includes(keyword.toLowerCase()));
+            
+            const bangunanIdx = findCol('bangunan');
+            // Cari lajur 'Jumlah' tetapi elakkan terambil 'Jumlah Keluasan Lantai'
+            let jumlahIdx = -1;
+            for(let i = headers.length - 1; i >= 0; i--) {
+                if(headers[i] && headers[i].toLowerCase().includes('jumlah') && !headers[i].toLowerCase().includes('lantai')) {
+                    jumlahIdx = i;
+                    break;
+                }
+            }
+            const pelepasanIdx = findCol('pelepasan');
+            const intensitiIdx = findCol('kwh/m'); 
+            
+            // Cari posisi setiap lajur bulan
+            const months = ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogos', 'Sept', 'Okt', 'Nov', 'Dis'];
+            const monthIndices = months.map(m => {
+                return headers.findIndex(h => h && h.match(new RegExp(`\\b${m}\\b`, 'i')));
+            });
+
+            // 3. Proses pengekstrakan data baris demi baris
+            let bangunanData = [];
+            let monthlyTotals = new Array(12).fill(0);
+            let grandTotalKwh = 0;
+            let grandTotalCO2 = 0;
+
+            for(let i = headerRowIndex + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length <= bangunanIdx) continue; // Abaikan baris rosak
+                
+                const nama = row[bangunanIdx];
+                
+                // Skip baris kosong
+                if (!nama || nama.trim() === '') continue;
+                // Berhenti memproses apabila terjumpa baris 'Jumlah' keseluruhan di bahagian bawah
+                if (nama.toLowerCase().includes('jumlah')) break; 
+
+                // Fungsi bantu untuk bersihkan tanda koma dalam nombor (cth: "1,234" -> 1234)
+                const cleanNum = (str) => {
+                    if(!str) return 0;
+                    let num = parseFloat(str.toString().replace(/,/g, ''));
+                    return isNaN(num) ? 0 : num;
+                };
+
+                const jumlahKwh = cleanNum(row[jumlahIdx]);
+                const pelepasan = cleanNum(row[pelepasanIdx]);
+                const intensiti = cleanNum(row[intensitiIdx]);
+
+                if (jumlahKwh > 0 || pelepasan > 0) {
+                    bangunanData.push({
+                        name: nama,
+                        kwh: jumlahKwh,
+                        co2: pelepasan,
+                        intensiti: intensiti
+                    });
+                    
+                    grandTotalKwh += jumlahKwh;
+                    grandTotalCO2 += pelepasan;
+
+                    // Kira hasil tambah bulanan
+                    monthIndices.forEach((colIdx, mIdx) => {
+                        if (colIdx !== -1) {
+                            monthlyTotals[mIdx] += cleanNum(row[colIdx]);
+                        }
+                    });
+                }
+            }
+
+            // 4. Kemas kini KPI pada skrin
+            if(grandTotalCO2 > 0) {
+                document.getElementById('total-emissions').innerText = new Intl.NumberFormat().format(Math.round(grandTotalCO2));
+                // Andaian: Jumlah karbon dibahagikan anggaran populasi (cth: 5000)
+                document.getElementById('per-capita').innerText = (grandTotalCO2 / 5000).toFixed(2);
+            }
+
+            // 5. Susun data untuk Carta (Top 5)
+            // Tapis dan susun top 5 KWh tertinggi
+            const top5Kwh = [...bangunanData].sort((a, b) => b.kwh - a.kwh).slice(0, 5);
+            // Tapis dan susun top 5 intensiti tertinggi
+            const top5Intensiti = [...bangunanData].sort((a, b) => b.intensiti - a.intensiti).slice(0, 5);
+
+            // 6. Terjemah ke paparan Carta
+            renderCharts(top5Kwh, top5Intensiti, monthlyTotals, grandTotalCO2);
+        }
+
+        function renderCharts(top5Kwh, top5Intensiti, monthlyTotals, grandTotalCO2) {
+            
+            // Helper function to truncate long building names for chart display
+            const truncateLabel = (label) => label.length > 25 ? label.substring(0, 25) + '...' : label;
+
+            // --- 1. Scope Chart (Doughnut) ---
+            const ctxScope = document.getElementById('scopeChart').getContext('2d');
+            if (scopeChart) scopeChart.destroy(); // Padam carta lama jika ada (penting untuk elak bug)
+            scopeChart = new Chart(ctxScope, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Scope 2 (Electricity) - Tracked', 'Unmetered/Untracked'],
+                    datasets: [{
+                        data: [grandTotalCO2, grandTotalCO2 * 0.10], // Andaian 10% tidak bermeter untuk visualisasi
+                        backgroundColor: ['#10b981', '#cbd5e1'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, boxWidth: 8 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed !== null) {
+                                        label += new Intl.NumberFormat().format(Math.round(context.parsed)) + ' tCO₂e';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- 2. Source Breakdown Chart (Horizontal Bar) ---
+            const ctxSource = document.getElementById('sourceChart').getContext('2d');
+            if (sourceChart) sourceChart.destroy();
+            sourceChart = new Chart(ctxSource, {
+                type: 'bar',
+                data: {
+                    labels: top5Kwh.map(d => truncateLabel(d.name)),
+                    datasets: [{
+                        label: 'Energy Consumption (kWh)',
+                        data: top5Kwh.map(d => d.kwh),
+                        backgroundColor: '#10b981',
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (context) => `${new Intl.NumberFormat().format(context.parsed.x)} kWh` } }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#f1f5f9' },
+                            title: { display: true, text: 'kWh' },
+                            ticks: { callback: function(value) { return value >= 1000 ? value / 1000 + 'k' : value; } }
+                        },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // --- 3. Energy Intensity Chart (Horizontal Bar) ---
+            const ctxIntensity = document.getElementById('intensityChart').getContext('2d');
+            if (intensityChart) intensityChart.destroy();
+            intensityChart = new Chart(ctxIntensity, {
+                type: 'bar',
+                data: {
+                    labels: top5Intensiti.map(d => truncateLabel(d.name)),
+                    datasets: [{
+                        label: 'Energy Intensity (kWh/m²)',
+                        data: top5Intensiti.map(d => d.intensiti),
+                        backgroundColor: '#0ea5e9',
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: (context) => `${new Intl.NumberFormat().format(context.parsed.x)} kWh/m²` } }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#f1f5f9' },
+                            title: { display: true, text: 'kWh/m²' },
+                            ticks: { callback: function(value) { return value >= 1000 ? value / 1000 + 'k' : value; } }
+                        },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // --- 4. Trend Chart (Line) ---
+            const ctxTrend = document.getElementById('trendChart').getContext('2d');
+            if (trendChart) trendChart.destroy();
+            
+            // Bersihkan sifar untuk bulan-bulan yang datanya belum direkodkan
+            const cleanMonthly = monthlyTotals.map(val => val === 0 ? null : val);
+
+            trendChart = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ogos', 'Sept', 'Okt', 'Nov', 'Dis'],
+                    datasets: [
+                        {
+                            label: 'Pelepasan Terkini (kWh)',
+                            data: cleanMonthly,
+                            borderColor: '#10b981', 
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: '#10b981',
+                            fill: true,
+                            tension: 0.4 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 8 } },
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            beginAtZero: true,
+                            title: { display: true, text: 'Tenaga Digunakan (kWh)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Jalankan fungsi loadLiveExcelData() apabila laman web dibuka
+        window.onload = function() {
+            loadLiveExcelData();
+        };
+
+    </script>
+</body>
+</html>
