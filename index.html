@@ -1,45 +1,155 @@
-<!-- ... existing code ... -->
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus GHG Emissions Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- GANTI PapaParse dengan SheetJS untuk baca fail XLSX -->
+    <!-- Mesti ada SheetJS untuk baca fail XLSX Google Drive -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-<!-- ... existing code ... -->
-```
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        
+        @media print {
+            body { background-color: white; }
+            .glass-card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; }
+            .no-print { display: none !important; }
+            canvas { max-height: 250px !important; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
 
-Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian paling bawah (sebelum `</body>`):
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10 print:static print:border-none">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <img src="Uitmlogo_1683739413.jpg" alt="UiTM Logo" class="h-14 w-auto object-contain">
+                <div>
+                    <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Green Campus, UiTM Perak Branch</p>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Campus GHG Emissions</h1>
+                    <p class="text-sm text-slate-500 font-medium">Real-time Sustainability Performance</p>
+                </div>
+            </div>
+            <div class="flex gap-3 items-center">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm no-print">
+                    <svg class="mr-1.5 h-2 w-2 text-emerald-500 animate-pulse" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" /></svg>
+                    Live Data
+                </span>
+                <button onclick="window.print()" class="no-print inline-flex items-center justify-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors">
+                    <svg class="mr-2 -ml-1 h-4 w-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Print Report
+                </button>
+            </div>
+        </div>
+    </header>
 
-```html:Kemas Kini Dashboard:dashboard.html
-<!-- ... existing code ... -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col justify-center">
+                <div class="absolute -right-4 -top-4 opacity-5"><svg class="w-32 h-32 text-emerald-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.83L18.17 19H5.83L12 5.83z"/></svg></div>
+                <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Total Carbon Footprint (tCO₂e)</h3>
+                
+                <div class="grid grid-cols-2 gap-4 border-b border-slate-100 pb-4 mb-3">
+                    <div>
+                        <p class="text-4xl font-bold text-slate-900" id="total-emissions-2026">--</p>
+                        <p class="text-xs font-medium text-slate-500 mt-1">2026 (YTD)</p>
+                    </div>
+                    <div class="border-l border-slate-100 pl-4">
+                        <p class="text-3xl font-bold text-slate-400" id="total-emissions-2025">--</p>
+                        <p class="text-xs font-medium text-slate-400 mt-1">2025 (Setahun)</p>
+                    </div>
+                </div>
+                
+                <div id="emissions-trend"></div>
+                <p class="text-[10px] text-slate-400 mt-2">** YTD comparison matches identical active months (e.g., Jan-Jun '25 vs Jan-Jun '26) for fair analysis.</p>
+            </div>
+            
+            <div class="glass-card rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Data Tracking Coverage</h2>
+                <p class="text-xs text-slate-500 mb-4">Metered vs Unmetered Building Status</p>
+                <div class="h-56 w-full relative">
+                    <canvas id="scopeChart"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+                        <span class="text-xl font-bold text-slate-800">Electricity</span>
+                        <span class="text-[10px] text-slate-500">Tracked vs Untracked</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="glass-card rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Top 5 Highest Energy Consumers</h2>
+                <p class="text-sm text-slate-500 mb-6">Highest energy usage (kWh) by building</p>
+                <div class="h-80 w-full">
+                    <canvas id="sourceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Lowest 5 Energy Consumers</h2>
+                <p class="text-sm text-slate-500 mb-6">Lowest energy usage (excluding unmetered buildings)</p>
+                <div class="h-80 w-full">
+                    <canvas id="bottomChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-slate-900 mb-1">Energy Intensity (kWh/m²)</h2>
+                <p class="text-sm text-slate-500 mb-6">Efficiency comparison based on floor area</p>
+                <div class="h-80 w-full">
+                    <canvas id="intensityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex justify-between items-center mb-1">
+                    <h2 class="text-lg font-bold text-slate-900">Emissions Trend (YTD)*</h2>
+                </div>
+                <p class="text-sm text-slate-500 mb-6">Tracking monthly performance (2026 vs 2025)</p>
+                <div class="h-80 w-full">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <p class="text-xs text-slate-500 mt-6">* Remarks: Data for certain buildings may be zero (0) as the process of installing individual electrical meters is currently in progress.</p>
+    </main>
+
     <footer class="bg-slate-800 text-slate-300 py-6 text-center text-sm border-t border-slate-700 mt-auto">
-        <p>&copy; 2026 Campus Sustainability Office. Dashboard generated for analysis.</p>
-        <p class="mt-1 text-xs text-slate-400">Values based on "Inventori GHG untuk kampus danpengiraan data pelepasan karbon (3).xlsx".</p>
+        <p>&copy; 2026 Green Campus, UiTM Perak branch. Dashboard generated for analysis.</p>
+        <p class="mt-1 text-xs text-slate-400">Values dynamically fetched from Google Sheets.</p>
     </footer>
 
     <script>
-        let scopeChart, sourceChart, intensityChart, trendChart;
+        let scopeChart, sourceChart, bottomChart, intensityChart, trendChart;
 
         Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
         Chart.defaults.color = '#64748b'; 
 
         async function loadLiveExcelData() {
-            // TUKAR: Guna output=xlsx untuk muat turun keseluruhan buku kerja (termasuk 2025 & 2026)
+            // URL Mesti menggunakan output=xlsx supaya ia eksport semua sheets
             const excelUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRzhnSufRXiSZQN1RnsKwmLR6ItonxmI4ag7Zevfw4t7y5_7u3poVW0lDpc6rR2xQ/pub?output=xlsx';
             
             try {
                 const response = await fetch(excelUrl);
                 const arrayBuffer = await response.arrayBuffer();
-                // Baca fail excel menggunakan SheetJS
+                
+                // Baca fail excel menggunakan SheetJS (mampu baca multiple sheets)
                 const workbook = XLSX.read(arrayBuffer, {type: 'array'});
                 
                 processWorkbook(workbook);
             } catch (error) {
                 console.error("Ralat membaca Excel:", error);
-                alert("Tidak dapat mengambil data. Sila pastikan pautan Google Sheets adalah betul.");
+                const totalEmissionsEl = document.getElementById('total-emissions-2026');
+                if (totalEmissionsEl) {
+                    totalEmissionsEl.innerText = "Error";
+                }
             }
         }
 
@@ -83,6 +193,7 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                 
                 const nama = row[bangunanIdx];
                 if (!nama || String(nama).trim() === '') continue;
+                // Berhenti jika jumpa "Jumlah" di bahagian bawah table
                 if (String(nama).toLowerCase().includes('jumlah')) break; 
 
                 const cleanNum = (val) => {
@@ -95,8 +206,10 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                 const pelepasan = cleanNum(row[pelepasanIdx]);
                 const intensiti = cleanNum(row[intensitiIdx]);
 
+                // Simpan rekod semua bangunan
+                bangunanData.push({ name: String(nama), kwh: jumlahKwh, co2: pelepasan, intensiti: intensiti });
+                
                 if (jumlahKwh > 0 || pelepasan > 0) {
-                    bangunanData.push({ name: String(nama), kwh: jumlahKwh, co2: pelepasan, intensiti: intensiti });
                     grandTotalKwh += jumlahKwh;
                     grandTotalCO2 += pelepasan;
 
@@ -114,7 +227,7 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
             const sheetNames = workbook.SheetNames;
             // Secara automatik kenal pasti sheet mana mewakili 2025 dan 2026
             const sheet2025Name = sheetNames.find(n => n.includes('2025')) || sheetNames[0];
-            const sheet2026Name = sheetNames.find(n => n.includes('2026')) || sheetNames[1] || sheetNames[0];
+            const sheet2026Name = sheetNames.find(n => n.includes('2026')) || (sheetNames.length > 1 ? sheetNames[1] : sheetNames[0]);
 
             const rows2025 = XLSX.utils.sheet_to_json(workbook.Sheets[sheet2025Name], {header: 1, defval: null});
             const rows2026 = XLSX.utils.sheet_to_json(workbook.Sheets[sheet2026Name], {header: 1, defval: null});
@@ -124,36 +237,72 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
 
             if (!data2025 || !data2026) return;
 
-            // Kemas kini KPI 
-            if(data2025.grandTotalCO2 > 0) {
-                document.getElementById('total-emissions').innerText = new Intl.NumberFormat().format(Math.round(data2025.grandTotalCO2));
-                document.getElementById('per-capita').innerText = (data2025.grandTotalCO2 / 5000).toFixed(2);
+            // Kemas kini KPI (2025 vs 2026)
+            const total2025El = document.getElementById('total-emissions-2025');
+            const total2026El = document.getElementById('total-emissions-2026');
+            const trendEl = document.getElementById('emissions-trend');
+            
+            if (total2025El && total2026El && trendEl) {
+                // Papar total setakat data terkini
+                total2025El.innerText = new Intl.NumberFormat().format(Math.round(data2025.grandTotalCO2));
+                total2026El.innerText = new Intl.NumberFormat().format(Math.round(data2026.grandTotalCO2));
+                
+                // Cari berapa bulan dalam 2026 yang sudah ada data (YTD calculation)
+                let activeMonths2026 = 0;
+                for (let i = 0; i < 12; i++) {
+                    if (data2026.monthlyTotals[i] > 0) activeMonths2026 = i + 1;
+                }
+
+                // Bandingkan jumlah apple-to-apple (contoh: Jan-Jun 2025 vs Jan-Jun 2026)
+                let ytd2025_kwh = data2025.monthlyTotals.slice(0, activeMonths2026).reduce((a,b)=>a+b, 0);
+                let ytd2026_kwh = data2026.monthlyTotals.slice(0, activeMonths2026).reduce((a,b)=>a+b, 0);
+                
+                if (ytd2025_kwh > 0) {
+                    let diff = ((ytd2026_kwh - ytd2025_kwh) / ytd2025_kwh) * 100;
+                    let isDown = diff <= 0;
+                    let colorClass = isDown ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
+                    let iconPath = isDown 
+                        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>' 
+                        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>';
+                    let trendText = isDown ? 'Trending Down' : 'Trending Up';
+                    
+                    trendEl.className = `text-xs font-medium flex items-center w-fit px-2 py-1 rounded ${colorClass}`;
+                    trendEl.innerHTML = `
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconPath}</svg>
+                        ${trendText} ${Math.abs(diff).toFixed(1)}% (2025 vs 2026 YTD)
+                    `;
+                }
             }
 
+            // Dapatkan Top 5
             const top5Kwh = [...data2025.bangunanData].sort((a, b) => b.kwh - a.kwh).slice(0, 5);
+            
+            // Dapatkan Lowest 5 (Mesti asingkan nilai 0 / tidak bermeter terlebih dahulu)
+            const bottom5Kwh = [...data2025.bangunanData].filter(d => d.kwh > 0).sort((a, b) => a.kwh - b.kwh).slice(0, 5);
+            
             const top5Intensiti = [...data2025.bangunanData].sort((a, b) => b.intensiti - a.intensiti).slice(0, 5);
 
-            renderCharts(top5Kwh, top5Intensiti, data2025.monthlyTotals, data2026.monthlyTotals, data2025.grandTotalCO2);
+            renderCharts(top5Kwh, bottom5Kwh, top5Intensiti, data2025.monthlyTotals, data2026.monthlyTotals, data2025.grandTotalCO2);
         }
 
-        function renderCharts(top5Kwh, top5Intensiti, monthly2025, monthly2026, grandTotalCO2) {
-            const truncateLabel = (label) => label.length > 25 ? label.substring(0, 25) + '...' : label;
+        function renderCharts(top5Kwh, bottom5Kwh, top5Intensiti, monthly2025, monthly2026, grandTotalCO2) {
+            const truncateLabel = (label) => label.length > 22 ? label.substring(0, 22) + '...' : label;
 
-            // --- 1. Scope Chart ---
+            // --- 1. Data Tracking Coverage (Tracked vs Untracked) ---
             const ctxScope = document.getElementById('scopeChart').getContext('2d');
             if (scopeChart) scopeChart.destroy();
             scopeChart = new Chart(ctxScope, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Scope 2 (Electricity) - Tracked', 'Unmetered/Untracked'],
+                    labels: ['Electricity (Tracked)', 'Unmetered / Untracked'],
                     datasets: [{
-                        data: [grandTotalCO2, grandTotalCO2 * 0.10],
+                        data: [grandTotalCO2, grandTotalCO2 * 0.15], // Menggunakan anggaran ~15% margin
                         backgroundColor: ['#10b981', '#cbd5e1'],
                         borderWidth: 2, borderColor: '#ffffff', hoverOffset: 4
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    responsive: true, maintainAspectRatio: false, cutout: '68%',
                     plugins: {
                         legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, boxWidth: 8 } },
                         tooltip: { callbacks: { label: (context) => {
@@ -166,7 +315,7 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                 }
             });
 
-            // --- 2. Source Breakdown Chart ---
+            // --- 2. Source Breakdown Chart (Top 5) ---
             const ctxSource = document.getElementById('sourceChart').getContext('2d');
             if (sourceChart) sourceChart.destroy();
             sourceChart = new Chart(ctxSource, {
@@ -176,7 +325,32 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                     datasets: [{
                         label: 'Energy Consumption (kWh)',
                         data: top5Kwh.map(d => d.kwh),
-                        backgroundColor: '#10b981', borderRadius: 4, barPercentage: 0.6
+                        backgroundColor: '#f43f5e', // Warna Merah untuk Pengguna Tinggi
+                        borderRadius: 4, barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => `${new Intl.NumberFormat().format(context.parsed.x)} kWh` } } },
+                    scales: {
+                        x: { grid: { color: '#f1f5f9' }, title: { display: true, text: 'kWh' }, ticks: { callback: (value) => value >= 1000 ? value / 1000 + 'k' : value } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // --- 2.5. Lowest 5 Energy Consumers ---
+            const ctxBottom = document.getElementById('bottomChart').getContext('2d');
+            if (bottomChart) bottomChart.destroy();
+            bottomChart = new Chart(ctxBottom, {
+                type: 'bar',
+                data: {
+                    labels: bottom5Kwh.map(d => truncateLabel(d.name)),
+                    datasets: [{
+                        label: 'Energy Consumption (kWh)',
+                        data: bottom5Kwh.map(d => d.kwh),
+                        backgroundColor: '#10b981', // Warna Hijau untuk Pengguna Rendah / Cekap
+                        borderRadius: 4, barPercentage: 0.6
                     }]
                 },
                 options: {
@@ -216,10 +390,9 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             if (trendChart) trendChart.destroy();
             
-            // Bersihkan sifar untuk paparan carta yang kemas
             const cleanMonthly2025 = monthly2025.map(val => val === 0 ? null : val);
             const cleanMonthly2026 = monthly2026.map((val, idx) => {
-                if (val === 0 && idx >= 6) return null; // Jika bulan Julai ke atas masih sifar, jadikan kosong
+                if (val === 0 && idx >= 6) return null; // Anggap bulan selepas jun tiada data lagi untuk 2026
                 return val === 0 ? null : val;
             });
 
@@ -231,7 +404,7 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                         {
                             label: '2026 (Terkini)',
                             data: cleanMonthly2026,
-                            borderColor: '#10b981', // Hijau Terang
+                            borderColor: '#10b981', // Hijau
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
                             borderWidth: 2, pointBackgroundColor: '#10b981', pointBorderColor: '#fff',
                             fill: true, tension: 0.4 
@@ -241,7 +414,7 @@ Seterusnya, gantikan keseluruhan blok `<script> ... </script>` di bahagian palin
                             data: cleanMonthly2025,
                             borderColor: '#94a3b8', // Kelabu
                             backgroundColor: 'transparent',
-                            borderWidth: 2, borderDash: [5, 5], // Garisan putus-putus
+                            borderWidth: 2, borderDash: [5, 5],
                             pointBackgroundColor: '#94a3b8', pointBorderColor: '#fff',
                             fill: false, tension: 0.4 
                         }
